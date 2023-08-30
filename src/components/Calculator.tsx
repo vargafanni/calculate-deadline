@@ -1,3 +1,4 @@
+import { constants } from "fs";
 import * as React from "react";
 import { useEffect, useState } from "react";
 
@@ -7,9 +8,9 @@ const Calculator = () => {
     const [turnaroundTime, setTurnaroundTime] = React.useState(1);
     const [deadline, setDeadline] = React.useState<null | Date>(null);
 
-    useEffect(()=>{
+    useEffect(() => {
         calculate();
-    },[submitDate,turnaroundTime]);
+    }, [submitDate, turnaroundTime]);
 
     const convertToMilliseconds = (hours: number, minutes: number, seconds: number) => (hours * 60 * 60 + minutes * 60 + seconds) * 1000;
 
@@ -37,9 +38,31 @@ const Calculator = () => {
     };
 
     const calculate = () => {
-        const deadline = new Date(submitDate);
-        deadline.setHours(deadline.getHours() + (Number.isNaN(turnaroundTime)?0:turnaroundTime));
-        setDeadline(deadline);
+        const timeOfEODinMilliseconds = convertToMilliseconds(17, 0, 0);
+        const startTimeInMilliseconds = convertToMilliseconds(submitDate.getHours(), submitDate.getMinutes(), submitDate.getSeconds());
+        const leftOverTimeOfDay = timeOfEODinMilliseconds - startTimeInMilliseconds;
+        const workingDayInMilliseconds = convertToMilliseconds(8, 0, 0);
+        let turnaroundTimeInMilliseconds = convertToMilliseconds(turnaroundTime, 0, 0);
+        const calculatedDeadline = new Date(submitDate.getTime());
+
+        if (leftOverTimeOfDay > turnaroundTimeInMilliseconds) {
+            //if turnaroundTime less then the rest of the working day time don't need to calculate with days
+            calculatedDeadline.setMilliseconds(turnaroundTimeInMilliseconds);
+
+        } else {
+            //if turnaroundTime more then the rest of the working day time we need to calculate the days
+            turnaroundTimeInMilliseconds -= leftOverTimeOfDay;
+            let turnaroundDays = Math.floor(turnaroundTimeInMilliseconds / workingDayInMilliseconds);
+            turnaroundDays += Math.floor((turnaroundDays + submitDate.getDay()) / 5) * 2 + 1;//plus one is the filled leftover of the start day
+            calculatedDeadline.setDate(calculatedDeadline.getDate() + turnaroundDays);
+            calculatedDeadline.setHours(9);
+            calculatedDeadline.setMinutes(0);
+            calculatedDeadline.setSeconds(0);
+            calculatedDeadline.setMilliseconds(turnaroundTimeInMilliseconds % workingDayInMilliseconds);
+
+        }
+
+        setDeadline(calculatedDeadline);
     };
 
     return (
@@ -48,7 +71,7 @@ const Calculator = () => {
                 {errorMessage &&
                     <h3 id='error' style={{ color: "red" }}>{errorMessage}</h3>}
                 <label>
-                    Submit date: <input data-testid='submit-date' id='submit-date' value={convertDateToString(submitDate)} name='submitDate' type='datetime-local' onChange={(e) => parseSubmitDate(e)}  />
+                    Submit date: <input data-testid='submit-date' id='submit-date' value={convertDateToString(submitDate)} name='submitDate' type='datetime-local' onChange={(e) => parseSubmitDate(e)} />
                 </label>
                 <label>
                     Turnaround time (h): <input data-testid='turnaround-time' id="turnaround-time" value={turnaroundTime} min={0} name='turnaroundTime' type='number' onChange={(e) => parseTurnaroundTime(e)} />
