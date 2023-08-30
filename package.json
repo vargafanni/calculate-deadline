@@ -23,7 +23,6 @@
     "build": "react-scripts build",
     "test": "react-scripts test",
     "e2e": "cypress run",
-    "eject": "react-scripts eject",
     "lint": "eslint --fix './**/**.tsx'"
   },
   "eslintConfig": {

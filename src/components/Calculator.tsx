@@ -1,4 +1,3 @@
-import { constants } from "fs";
 import * as React from "react";
 import { useEffect, useState } from "react";
 
@@ -28,7 +27,6 @@ const Calculator = () => {
 
     const parseTurnaroundTime = (e: React.ChangeEvent<HTMLInputElement>) => {
         const turnaroundTime = Number.parseInt(e.currentTarget.value);
-
         setTurnaroundTime(turnaroundTime);
     };
 
@@ -41,19 +39,20 @@ const Calculator = () => {
         const timeOfEODinMilliseconds = convertToMilliseconds(17, 0, 0);
         const startTimeInMilliseconds = convertToMilliseconds(submitDate.getHours(), submitDate.getMinutes(), submitDate.getSeconds());
         const leftOverTimeOfDay = timeOfEODinMilliseconds - startTimeInMilliseconds;
-        const workingDayInMilliseconds = convertToMilliseconds(8, 0, 0);
-        let turnaroundTimeInMilliseconds = convertToMilliseconds(turnaroundTime, 0, 0);
         const calculatedDeadline = new Date(submitDate.getTime());
+        let turnaroundTimeInMilliseconds = convertToMilliseconds(turnaroundTime, 0, 0);
 
         if (leftOverTimeOfDay > turnaroundTimeInMilliseconds) {
-            //if turnaroundTime less then the rest of the working day time don't need to calculate with days
+            //if turnaround time can be processed in the submit date's leftover work time 
             calculatedDeadline.setMilliseconds(turnaroundTimeInMilliseconds);
 
         } else {
-            //if turnaroundTime more then the rest of the working day time we need to calculate the days
+            //if turnaround time exceeds the submit date's leftover work time we need to calculate the turnaround days
+            const workingDayInMilliseconds = convertToMilliseconds(8, 0, 0);
             turnaroundTimeInMilliseconds -= leftOverTimeOfDay;
             let turnaroundDays = Math.floor(turnaroundTimeInMilliseconds / workingDayInMilliseconds);
-            turnaroundDays += Math.floor((turnaroundDays + submitDate.getDay()) / 5) * 2 + 1;//plus one is the filled leftover of the start day
+            //calculate with weekends and the plus one is the filled leftover of the submit date
+            turnaroundDays += Math.floor((turnaroundDays + submitDate.getDay()) / 5) * 2 + 1;
             calculatedDeadline.setDate(calculatedDeadline.getDate() + turnaroundDays);
             calculatedDeadline.setHours(9);
             calculatedDeadline.setMinutes(0);
