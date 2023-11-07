@@ -12,5 +12,5 @@ export const indexOfSunday = 0;
 export const indexOfLastCharForDateFormatting = -8;
 export const errorMessages = {
     nonWorkingDay : () => "Submit date must be between Monday and Friday!",
-    nonWorkingHour: () => "Submit date must be between 9=00 and 17=00!"
+    nonWorkingHour: () => "Submit date must be between 9:00 and 17:00!"
 };
