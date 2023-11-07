@@ -1,66 +1,63 @@
-import * as React from "react";
+import React, { ChangeEvent } from "react";
 import { useEffect, useState } from "react";
+import { countOfWorkingHours, zero, convertingNumberBetweenTime, convertingNumberForMilliseconds, indexOfSaturday, indexOfSunday, errorMessages, startingHourOfWorkingDay, finishingHourOfWorkingDay, indexOfLastCharForDateFormatting, countOfWorkingDays, countOfNonWorkingDays } from "../helpers/constans";
+
 
 const Calculator = () => {
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
-    const [submitDate, setSubmitDate] = React.useState(new Date("2023-08-29T09:00:00.000"));
-    const [turnaroundTime, setTurnaroundTime] = React.useState(1);
-    const [deadline, setDeadline] = React.useState<null | Date>(null);
+    const [submitDate, setSubmitDate] = useState(new Date(new Date().setHours(startingHourOfWorkingDay,zero,zero,zero))); //TODO: submit date should be now or next working minute
+    const [turnaroundTime, setTurnaroundTime] = useState(zero);
+    const [deadline, setDeadline] = useState<null | Date>(null);
 
     useEffect(() => {
         calculate();
     }, [submitDate, turnaroundTime]);
 
-    const convertToMilliseconds = (hours: number, minutes: number, seconds: number) => (hours * 60 * 60 + minutes * 60 + seconds) * 1000;
+    const convertToMilliseconds = (hours: number, minutes: number, seconds: number) => (hours * convertingNumberBetweenTime * convertingNumberBetweenTime + minutes * convertingNumberBetweenTime + seconds) * convertingNumberForMilliseconds;
 
-    const parseSubmitDate = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const parseAndValidateSubmitDate = (e: ChangeEvent<HTMLInputElement>) => {
         const date = new Date(e.currentTarget.value);
-        if (date.getDay() === 0 || date.getDay() === 6) {
-            setErrorMessage("Submit date must be between Monday and Friday!");
-        } else if (date.getHours() < 9 || date.getHours() >= 17) {
-            setErrorMessage("Submit date must be between 9:00 and 17:00!");
+        if (date.getDay() === indexOfSaturday || date.getDay() === indexOfSunday) {
+            setErrorMessage(errorMessages.nonWorkingDay);
+        } else if (date.getHours() < startingHourOfWorkingDay || date.getHours() >= finishingHourOfWorkingDay) {
+            setErrorMessage(errorMessages.nonWorkingHour);
         } else {
             setErrorMessage(null);
             setSubmitDate(new Date(date.getTime()));
         }
     };
 
-    const parseTurnaroundTime = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const parseTurnaroundTime = (e: ChangeEvent<HTMLInputElement>) => {
         const turnaroundTime = Number.parseInt(e.currentTarget.value);
         setTurnaroundTime(turnaroundTime);
     };
 
     const convertDateToString = (date: Date) => {
-        const removeTimezoneOffset = new Date(date.getTime() - convertToMilliseconds(0, date.getTimezoneOffset(), 0));
-        return removeTimezoneOffset.toISOString().slice(0, -8);
+        const removeTimezoneOffset = new Date(date.getTime() - convertToMilliseconds(zero, date.getTimezoneOffset(), zero));
+        return removeTimezoneOffset.toISOString().slice(zero, indexOfLastCharForDateFormatting);
     };
 
     const calculate = () => {
-        const timeOfEODinMilliseconds = convertToMilliseconds(17, 0, 0);
+        const timeOfEODinMilliseconds = convertToMilliseconds(finishingHourOfWorkingDay, zero, zero);
         const startTimeInMilliseconds = convertToMilliseconds(submitDate.getHours(), submitDate.getMinutes(), submitDate.getSeconds());
         const leftOverTimeOfDay = timeOfEODinMilliseconds - startTimeInMilliseconds;
         const calculatedDeadline = new Date(submitDate.getTime());
-        let turnaroundTimeInMilliseconds = convertToMilliseconds(turnaroundTime, 0, 0);
+        let turnaroundTimeInMilliseconds = convertToMilliseconds(turnaroundTime, zero, zero);
 
         if (leftOverTimeOfDay > turnaroundTimeInMilliseconds) {
             //if turnaround time can be processed in the submit date's leftover work time 
             calculatedDeadline.setMilliseconds(turnaroundTimeInMilliseconds);
-
         } else {
+            const today = 1;
             //if turnaround time exceeds the submit date's leftover work time we need to calculate the turnaround days
-            const workingDayInMilliseconds = convertToMilliseconds(8, 0, 0);
+            const workingDayInMilliseconds = convertToMilliseconds(countOfWorkingHours, zero, zero);
             turnaroundTimeInMilliseconds -= leftOverTimeOfDay;
             let turnaroundDays = Math.floor(turnaroundTimeInMilliseconds / workingDayInMilliseconds);
             //calculate with weekends and the plus one is the filled leftover of the submit date
-            turnaroundDays += Math.floor((turnaroundDays + submitDate.getDay()) / 5) * 2 + 1;
+            turnaroundDays += Math.floor((turnaroundDays + submitDate.getDay()) / countOfWorkingDays) * countOfNonWorkingDays + today;
             calculatedDeadline.setDate(calculatedDeadline.getDate() + turnaroundDays);
-            calculatedDeadline.setHours(9);
-            calculatedDeadline.setMinutes(0);
-            calculatedDeadline.setSeconds(0);
-            calculatedDeadline.setMilliseconds(turnaroundTimeInMilliseconds % workingDayInMilliseconds);
-
+            calculatedDeadline.setHours(startingHourOfWorkingDay,zero,zero,turnaroundTimeInMilliseconds % workingDayInMilliseconds);
         }
-
         setDeadline(calculatedDeadline);
     };
 
@@ -70,10 +67,10 @@ const Calculator = () => {
                 {errorMessage &&
                     <h3 id='error' style={{ color: "red" }}>{errorMessage}</h3>}
                 <label>
-                    Submit date: <input data-testid='submit-date' id='submit-date' value={convertDateToString(submitDate)} name='submitDate' type='datetime-local' onChange={(e) => parseSubmitDate(e)} />
+                    Submit date: <input data-testid='submit-date' id='submit-date' value={convertDateToString(submitDate)} name='submitDate' type='datetime-local' onChange={(e) => parseAndValidateSubmitDate(e)} />
                 </label>
                 <label>
-                    Turnaround time (h): <input data-testid='turnaround-time' id="turnaround-time" value={turnaroundTime} min={0} name='turnaroundTime' type='number' onChange={(e) => parseTurnaroundTime(e)} />
+                    Turnaround time (h): <input data-testid='turnaround-time' id="turnaround-time" value={turnaroundTime} min={zero} name='turnaroundTime' type='number' onChange={(e) => parseTurnaroundTime(e)} />
                 </label>
             </form>
             <h2>
